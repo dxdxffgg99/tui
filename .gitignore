@@ -1,0 +1,42 @@
+# Build artifacts
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/install/
+
+# Executables
+*.exe
+*.out
+tui_test
+
+# Object files and libraries
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+
+# Editor and IDE files
+*~
+*.swp
+.vscode/
+.idea/
+*.suo
+*.user
+*.vcxproj*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs, tests, coverage
+*.log
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Misc
+compile_commands.json
