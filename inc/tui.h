@@ -23,6 +23,11 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Get current terminal size in rows and columns.
+ * @details Writes row and column counts to the provided pointers. Returns 0 on
+ * success, -1 on failure.
+ */
 static inline int tui_get_size(unsigned short *rows, unsigned short *cols) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -51,12 +56,20 @@ typedef struct {
 } tui_frame_t;
 
 
+/**
+ * @brief Convert a character to a printable ASCII fallback.
+ * @details Returns the input when it is printable ASCII, otherwise returns '?'.
+ */
 static inline char tui_sanitize_ascii(char ch) {
     if ((unsigned char)ch < 32 || (unsigned char)ch > 126) return '?';
 
     return ch;
 }
 
+/**
+ * @brief Allocate a new frame with the given size.
+ * @details Returns a newly allocated frame or NULL on failure.
+ */
 static inline tui_frame_t *tui_frame_new(size_t rows, size_t cols) {
     if (rows == 0 || cols == 0 || cols > SIZE_MAX / rows) return NULL;
 
@@ -75,6 +88,10 @@ static inline tui_frame_t *tui_frame_new(size_t rows, size_t cols) {
 }
 
 
+/**
+ * @brief Free a frame and its backing storage.
+ * @details Safe to call with NULL.
+ */
 static inline void tui_frame_free(tui_frame_t *f) {
     if (!f) return;
 
@@ -83,6 +100,10 @@ static inline void tui_frame_free(tui_frame_t *f) {
 }
 
 
+/**
+ * @brief Set a character in the frame, sanitizing to ASCII.
+ * @details Returns 0 on success and -1 on bounds or argument failure.
+ */
 static inline int tui_frame_set_char(tui_frame_t *f, size_t r, size_t c, char ch) {
     if (!f || r >= f->rows || c >= f->cols) return -1;
 
@@ -92,6 +113,10 @@ static inline int tui_frame_set_char(tui_frame_t *f, size_t r, size_t c, char ch
 }
 
 
+/**
+ * @brief Get a character from the frame.
+ * @details Returns the character at the location or '\0' on failure.
+ */
 static inline char tui_frame_get_char(tui_frame_t *f, size_t r, size_t c) {
     if (!f || r >= f->rows || c >= f->cols) return '\0';
 
@@ -99,6 +124,10 @@ static inline char tui_frame_get_char(tui_frame_t *f, size_t r, size_t c) {
 }
 
 
+/**
+ * @brief Fill the entire frame with a character.
+ * @details No-op when frame is NULL.
+ */
 static inline void tui_frame_clear(tui_frame_t *f, char ch) {
     if (!f) return;
 
@@ -106,6 +135,10 @@ static inline void tui_frame_clear(tui_frame_t *f, char ch) {
 }
 
 
+/**
+ * @brief Resize a frame, preserving overlapping contents.
+ * @details Returns 0 on success and -1 on failure.
+ */
 static inline int tui_frame_resize(tui_frame_t *f, size_t rows, size_t cols) {
     if (!f || rows == 0 || cols == 0 || cols > SIZE_MAX / rows) return -1;
 
@@ -130,6 +163,10 @@ static inline int tui_frame_resize(tui_frame_t *f, size_t rows, size_t cols) {
 }
 
 
+/**
+ * @brief Draw the frame to an output stream with newlines.
+ * @details Writes each row followed by a newline and flushes the stream.
+ */
 static inline void tui_frame_draw(FILE *out, const tui_frame_t *f) {
     if (!f || !out) return;
 
@@ -142,12 +179,20 @@ static inline void tui_frame_draw(FILE *out, const tui_frame_t *f) {
 }
 
 
+/**
+ * @brief Move cursor to a 0-based row/column position.
+ * @details Emits an ANSI cursor move sequence to the output stream.
+ */
 static inline void tui_ansi_move_cursor(FILE *out, size_t r, size_t c) {
     if (!out) return;
 
     fprintf(out, "\x1b[%zu;%zuH", r + 1, c + 1);
 }
 
+/**
+ * @brief Clear the screen and move cursor to home.
+ * @details Emits ANSI clear and home sequences and flushes the stream.
+ */
 static inline void tui_ansi_clear_screen(FILE *out) {
     if (!out) return;
 
@@ -155,6 +200,10 @@ static inline void tui_ansi_clear_screen(FILE *out) {
     fflush(out);
 }
 
+/**
+ * @brief Hide the terminal cursor.
+ * @details Emits the ANSI hide-cursor sequence and flushes the stream.
+ */
 static inline void tui_ansi_hide_cursor(FILE *out) {
     if (!out) return;
 
@@ -162,6 +211,10 @@ static inline void tui_ansi_hide_cursor(FILE *out) {
     fflush(out);
 }
 
+/**
+ * @brief Show the terminal cursor.
+ * @details Emits the ANSI show-cursor sequence and flushes the stream.
+ */
 static inline void tui_ansi_show_cursor(FILE *out) {
     if (!out) return;
 
@@ -177,6 +230,11 @@ static struct termios tui_orig_termios;
 static int tui_termios_saved = 0;
 
 
+/**
+ * @brief Enable raw input mode (POSIX).
+ * @details Saves the original termios settings and registers an atexit
+ * handler. Returns 0 on success and -1 on failure.
+ */
 static inline int tui_enable_raw_mode(void) {
     struct termios raw;
 
@@ -200,6 +258,10 @@ static inline int tui_enable_raw_mode(void) {
     return 0;
 }
 
+/**
+ * @brief Restore original terminal mode (POSIX).
+ * @details No-op when no state is saved.
+ */
 static inline void tui_disable_raw_mode(void) {
     if (!tui_termios_saved) return;
     if (!isatty(STDIN_FILENO)) return;
@@ -217,6 +279,11 @@ static DWORD tui_orig_mode;
 static int tui_mode_saved = 0;
 
 
+/**
+ * @brief Enable raw input mode (Windows).
+ * @details Saves the original console mode and registers an atexit handler.
+ * Returns 0 on success and -1 on failure.
+ */
 static inline int tui_enable_raw_mode(void) {
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -237,6 +304,10 @@ static inline int tui_enable_raw_mode(void) {
     return 0;
 }
 
+/**
+ * @brief Restore original console mode (Windows).
+ * @details No-op when no state is saved.
+ */
 static inline void tui_disable_raw_mode(void) {
     if (!tui_mode_saved) return;
 
@@ -251,6 +322,11 @@ static inline void tui_disable_raw_mode(void) {
 #endif
 
 
+/**
+ * @brief Poll for a single key press.
+ * @details Waits up to timeout_ms milliseconds. Returns the key code as an
+ * unsigned char, or -1 on timeout or failure.
+ */
 static inline int tui_poll_key(int timeout_ms) {
 #ifndef _WIN32
     fd_set rfds;
@@ -288,8 +364,16 @@ static inline int tui_poll_key(int timeout_ms) {
 
 
 static volatile sig_atomic_t tui_resize_flag = 0;
+/**
+ * @brief Signal handler to mark a pending resize.
+ * @details Sets an internal flag used by the resize handler.
+ */
 static inline void tui_sigwinch_handler(int unused) { (void)unused; tui_resize_flag = 1; }
 
+/**
+ * @brief Install resize signal handler when supported.
+ * @details No-op on platforms without SIGWINCH.
+ */
 static inline void tui_install_resize_handler(void) {
 #ifndef _WIN32
 #ifdef SIGWINCH
@@ -305,6 +389,11 @@ typedef struct {
 } tui_ctx_t;
 
 
+/**
+ * @brief Create a new TUI context with front/back buffers.
+ * @details Uses the current terminal size or a 24x80 fallback. Returns a new
+ * context or NULL on failure.
+ */
 static inline tui_ctx_t *tui_ctx_new(FILE *out) {
     unsigned short rows = 0, cols = 0;
 
@@ -338,6 +427,10 @@ static inline tui_ctx_t *tui_ctx_new(FILE *out) {
 }
 
 
+/**
+ * @brief Free a TUI context and its frames.
+ * @details Safe to call with NULL.
+ */
 static inline void tui_ctx_free(tui_ctx_t *ctx) {
     if (!ctx) return;
 
@@ -347,6 +440,10 @@ static inline void tui_ctx_free(tui_ctx_t *ctx) {
 }
 
 
+/**
+ * @brief Handle a pending resize by updating frame sizes.
+ * @details Returns 1 if resized, 0 if no resize, and -1 on failure.
+ */
 static inline int tui_ctx_handle_resize(tui_ctx_t *ctx) {
     if (!ctx) return -1;
     if (!tui_resize_flag) return 0;
@@ -365,6 +462,10 @@ static inline int tui_ctx_handle_resize(tui_ctx_t *ctx) {
 }
 
 
+/**
+ * @brief Present back buffer differences to the output.
+ * @details Diffs back against front and writes only changed spans.
+ */
 static inline void tui_present(tui_ctx_t *ctx) {
     if (!ctx || !ctx->out) return;
 
